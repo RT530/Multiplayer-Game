@@ -1,0 +1,559 @@
+<html>
+
+<head>
+    <title>Multiplayer Game</title>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2.4.0/dist/umd/popper.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.js"></script>
+
+    <script src="/data/extra.js"></script>
+</head>
+{% if 'join' in request.url %}
+
+<body style="height: 100%; overflow: hidden;">
+    <div style="width: 260;">
+        <h1 align="center" style="width: 260;">Join Room</h1>
+        <form method="POST">
+            Name:
+            <input id="name" type="text" name="name" value="{{name}}" style="position: absolute; width: 180; right: 0;">
+            <br>
+            {% if password %}
+            Password:
+            <input type="password" name="password" style="position: absolute; width: 180; right: 0;">
+            <br>
+            {% endif %}
+            <br>
+            <button class="btn btn-primary" style="width: 260;" type="submit">Join</button>
+        </form>
+    </div>
+
+    <script>
+        $('div').center()
+
+        $(window).resize(() => {
+            $('div').center()
+        })
+
+        if (is_mobile()) {
+            if (location.href.indexOf('?mobile') == -1) location.href = `${location.href}?mobile=true`
+
+            $('body').append(
+                '<a href="/Multiplayer Game" style="position: absolute; top: 5; left: 5;">' +
+                '<button class="btn btn-primary" style="width: 75;">Home</button>' +
+                '</a>'
+            )
+        }
+    </script>
+</body>
+{% else %}
+
+<body>
+    <canvas id="game" style="position: absolute;"></canvas>
+    {% if not session['ai'] %}
+    <canvas id="map"
+        style="display: none; position: absolute; bottom: 5; right: 5; border-style: solid; opacity: 0.5;"></canvas>
+    <canvas id="upgrade" style="position: absolute; bottom: 5; opacity: 0.5;" width="500" height="378"></canvas>
+    {% endif %}
+
+    <div id="game_over" style="display: none;">
+        <h1 align="center" style="width: 250; height: 50; color: #000000;">Game Over</h1>
+        <p id="kill_by" align="center" style="width: 250; height: 50; color: #000000;"></p>
+        <p id="score" align="center" style="width: 250; height: 50; color: #000000;"></p>
+        <div style="position: absolute; background: #808080; opacity: 0.5;"></div>
+    </div>
+
+    <script>
+        resize()
+
+        var xp = 0
+        var level = 1
+        var center_x = width / 2
+        var center_y = height / 2
+        var width = window.innerWidth
+        var height = window.innerHeight
+        var size = JSON.parse('{{room_size}}')
+        var canvas = $('#game')[0].getContext('2d')
+        var show_map = false
+        var map_draw_loop = null
+        var offset = 250 / size.max()
+        $('#map').attr('width', offset * size[0])
+        $('#map').attr('height', offset * size[1])
+        var map = $('#map')[0].getContext('2d')
+        var upgrade = $('#upgrade')[0].getContext('2d')
+        var player_status = {
+            'mobile': is_mobile(),
+            'direction': 0,
+            'up': false,
+            'down': false,
+            'left': false,
+            'right': false,
+            'shooting': false,
+            'width': width,
+            'height': height,
+            'skill': false
+        }
+        for (var i = 1; i < 10; i++) player_status[i] = false
+
+        $(window).resize(resize)
+
+        loop()
+        function loop() {
+            $.get(`/Multiplayer Game/update?status=${JSON.stringify(player_status)}`, (data) => {
+                if (data['error'] == 'No such room') {
+                    location.href = '/Multiplayer Game'
+                }
+                if (data['error'] == 'No such player') {
+                    location.href = '/Multiplayer Game/join'
+                }
+
+                var offset_x = data['x']
+                var offset_y = data['y']
+
+                var players = data['players']
+                var bullets = data['bullets']
+                var xp_ball = data['xp_ball']
+
+                var opc_x = offset_x + center_x
+                var opc_y = offset_y + center_y
+
+                xp = data['xp']
+                size = data['size']
+                level = data['level']
+
+                canvas.fillStyle = '#808080'
+                canvas.fillRect(0, 0, width, height)
+
+                canvas.beginPath()
+                canvas.fillStyle = '#ffffff'
+                canvas.rect(opc_x, opc_y, size[0], size[1])
+                canvas.fill()
+                canvas.stroke()
+                canvas.closePath()
+
+                for (var i = 0; i < xp_ball.length; i++) {
+                    draw_xp_ball(
+                        xp_ball[i].size,
+                        opc_x + xp_ball[i].x,
+                        opc_y + xp_ball[i].y
+                    )
+                }
+
+                for (var i = 0; i < bullets.length; i++) {
+                    draw_bullet(
+                        bullets[i].id,
+                        opc_x + bullets[i].x,
+                        opc_y + bullets[i].y
+                    )
+                }
+
+                for (var i = 0; i < players.length; i++) {
+                    var player = players[i]
+
+                    draw_player(
+                        player.direction,
+                        opc_x + player.x,
+                        opc_y + player.y,
+                        player.hp,
+                        '#ff0000'
+                    )
+                }
+
+                if ("{{session['ai']}}" == 'False') {
+                    draw_level()
+                    upgrade_option_draw(data['upgrade'])
+                }
+
+                if (data['hp'] <= 0) {
+                    $('#map').hide()
+                    $('#game_over').show()
+                    $('#score').html(`Score: ${data['score']}`)
+                    $('#kill_by').html(`Kill By ${data['kill_by']}`)
+                } else {
+                    draw_player(
+                        data['direction'],
+                        center_x,
+                        center_y,
+                        data['hp']
+                    )
+                }
+
+                for (var i = 1; i < 10; i++)if (player_status[i]) player_status[i] = false
+
+                setTimeout(loop, 1000 / 60)
+            }).fail(() => {
+                setTimeout(loop, 1000 / 60)
+            })
+        }
+
+        function draw_xp_ball(size, x, y) {
+            canvas.fillStyle = '#00ff00'
+            canvas.beginPath()
+            canvas.arc(x, y, size, 0, Math.PI * 2)
+            canvas.fill()
+            canvas.stroke()
+            canvas.closePath()
+        }
+
+        function draw_bullet(id, x, y) {
+            if (id == "{{session['player_id']}}") {
+                canvas.fillStyle = '#0000ff'
+            } else {
+                canvas.fillStyle = '#ff0000'
+            }
+
+            canvas.beginPath()
+            canvas.arc(x, y, 5, 0, Math.PI * 2)
+            canvas.fill()
+            canvas.stroke()
+            canvas.closePath()
+        }
+
+        function draw_player(direction, x, y, hp, color) {
+            direction = Math.radian(direction)
+            color = color || '#0000ff'
+
+            canvas.beginPath()
+            canvas.fillStyle = '#808080'
+
+            var new_x = x - 5 * Math.cos(direction - Math.radian(90))
+            var new_y = y - 5 * Math.sin(direction - Math.radian(90))
+            canvas.moveTo(new_x, new_y)
+
+            new_x += 10 * Math.cos(direction - Math.radian(90))
+            new_y += 10 * Math.sin(direction - Math.radian(90))
+            canvas.lineTo(new_x, new_y)
+
+            new_x += 20 * Math.cos(direction + Math.radian(0))
+            new_y += + 20 * Math.sin(direction + Math.radian(0))
+            canvas.lineTo(new_x, new_y)
+
+            new_x += 10 * Math.cos(direction + Math.radian(90))
+            new_y += + 10 * Math.sin(direction + Math.radian(90))
+            canvas.lineTo(new_x, new_y)
+
+            new_x = x - 5 * Math.cos(direction - Math.radian(90))
+            new_y = y - 5 * Math.sin(direction - Math.radian(90))
+            canvas.lineTo(x - 5 * Math.cos(direction - Math.radian(90)), y - 5 * Math.sin(direction - Math.radian(90)))
+            canvas.fill()
+            canvas.stroke()
+
+            canvas.beginPath()
+            canvas.fillStyle = color
+            canvas.arc(x, y, 10, 0, Math.PI * 2)
+            canvas.fill()
+            canvas.stroke()
+            canvas.closePath()
+
+            if (hp != 1) {
+                canvas.fillStyle = '#ff0000'
+                canvas.fillRect(x - 15, y + 25, 30 * hp, 5)
+            }
+        }
+
+        function resize() {
+            $('h1').center()
+            $('#score').center()
+            $('#kill_by').center()
+
+            $('h1').css('top', get_number($('h1').css('top')) - 40)
+            $('#score').css('top', get_number($('p').css('top')) + 20)
+
+            width = $(window).width()
+            height = $(window).height()
+            $('#game').attr('width', width)
+            $('#game').attr('height', height)
+
+            canvas = $('#game')[0].getContext('2d')
+
+            center_x = width / 2
+            center_y = height / 2
+
+            status['width'] = width
+            status['height'] = height
+        }
+
+        function map_draw() {
+            $.get('/Multiplayer Game/map', (data) => {
+                map.fillStyle = '#ffffff'
+                map.fillRect(0, 0, 250, 250)
+
+                for (var i = 0; i < data.length; i++) {
+                    map.beginPath()
+                    map.fillStyle = data[i].color
+                    map.arc(data[i].x, data[i].y, 2.5, 0, Math.PI * 2)
+                    map.fill()
+                    map.stroke()
+                    map.closePath()
+                }
+            })
+        }
+    </script>
+    {% if session['mobile'] %}
+    <script>
+        function upgrade_touch(mouse) {
+            switch (mouse.type) {
+                case 'touchend':
+                    var left_distance = get_distance(mouse.pageX, mouse.pageY, left['x'], left['y'])
+                    var right_distance = get_distance(mouse.pageX, mouse.pageY, right['x'], right['y'])
+
+                    if (right_distance < left_distance) {
+                        player_status['shooting'] = false
+                        right = {
+                            'x': width - 100,
+                            'y': height - 100
+                        }
+                    } else {
+                        player_status['up'] = false
+                        player_status['down'] = false
+                        player_status['left'] = false
+                        player_status['right'] = false
+                        left = {
+                            'x': 100,
+                            'y': height - 100
+                        }
+                    }
+
+                    for (var i = 1; i < 10; i++) player_status[i] = get_distance(mouse.pageX, mouse.pageY, draw[i]['x'], draw[i]['y']) < 15
+                case 'touchmove':
+                    touches = mouse.touches
+            }
+            mouse.preventDefault()
+        }
+
+        function upgrade_option(id, x, y, fill, color) {
+            upgrade.fillStyle = color
+            upgrade.beginPath()
+            if (fill > 0) {
+                upgrade.arc(x, y, 20, 0, Math.PI * 2 * (fill / 5))
+                if (fill < 5) {
+                    upgrade.lineTo(x, y)
+                    upgrade.lineTo(x + 20 * Math.cos(0), y + 20 * Math.sin(0))
+                }
+            }
+            upgrade.fill()
+            upgrade.closePath()
+
+            upgrade.lineWidth = 2.5
+            upgrade.beginPath()
+            upgrade.arc(x, y, 20, 0, Math.PI * 2)
+            upgrade.stroke()
+            upgrade.closePath()
+
+            if (!draw[id]) draw[id] = { x: x, y: y }
+        }
+
+        function upgrade_option_draw(data) {
+            for (var i = 0; i < data.length; i++)upgrade_option(...data[i])
+
+            upgrade.fillStyle = '#808080'
+            upgrade.beginPath()
+            upgrade.arc(100, height - 100, 75, 0, Math.PI * 2)
+            upgrade.fill()
+            upgrade.closePath()
+
+            upgrade.beginPath()
+            upgrade.arc(width - 100, height - 100, 75, 0, Math.PI * 2)
+            upgrade.fill()
+            upgrade.closePath()
+
+            upgrade.fillStyle = '#000000'
+            upgrade.beginPath()
+            upgrade.arc(right['x'], right['y'], 25, 0, Math.PI * 2)
+            upgrade.fill()
+            upgrade.closePath()
+
+            upgrade.fillStyle = '#000000'
+            upgrade.beginPath()
+            upgrade.arc(left['x'], left['y'], 25, 0, Math.PI * 2)
+            upgrade.fill()
+            upgrade.closePath()
+        }
+
+        function draw_level() {
+            var text = `Level ${level}`
+            var x = center_x - canvas.measureText(text).width / 2
+            canvas.font = 'normal 18px Verdana'
+            canvas.fillStyle = '#000000'
+            canvas.fillText(text, x, height - 50)
+
+            canvas.beginPath()
+            canvas.fillStyle = '#00ff00'
+            canvas.rect(center_x - 125, height - 30, 250 * xp, 25)
+            canvas.fill()
+            canvas.closePath()
+
+            canvas.beginPath()
+            canvas.fillStyle = '#00ff00'
+            canvas.rect(center_x - 125, height - 30, 250, 25)
+            canvas.stroke()
+            canvas.closePath()
+
+            for (var i = 0; i < touches.length; i++) {
+                mouse = touches[i]
+                if (get_distance(mouse.pageX, mouse.pageY, width - 100, height - 100) < 50) {
+                    player_status['shooting'] = true
+                    right['x'] = mouse.pageX
+                    right['y'] = mouse.pageY
+
+                    var distance_x = mouse.pageX - (width - 100)
+                    var distance_y = mouse.pageY - (height - 100)
+                    var direction = Math.degree(Math.atan(distance_y / distance_x))
+                    if (distance_x < 0) direction += 180
+                    player_status['direction'] = direction
+                }
+
+                if (get_distance(mouse.pageX, mouse.pageY, 100, height - 100) < 50) {
+                    left['x'] = mouse.pageX
+                    left['y'] = mouse.pageY
+
+                    var distance_x = mouse.pageX - 100
+                    var distance_y = mouse.pageY - (height - 100)
+                    var direction = Math.degree(Math.atan(distance_y / distance_x))
+                    if (distance_x < 0) direction += 180
+
+                    player_status['right'] = -50 < direction && direction < 50
+                    player_status['down'] = 40 < direction && direction < 140
+                    player_status['left'] = 130 < direction && direction < 230
+                    player_status['up'] = 220 < direction || direction < -40
+                }
+            }
+        }
+
+        $('#upgrade').on('touchend', upgrade_touch)
+        $('#upgrade').on('touchmove', upgrade_touch)
+        $('#upgrade').attr('width', $(window).width())
+        $('#upgrade').attr('height', $(window).height())
+        $('body').on('touchmove', (mouse) => mouse.preventDefault())
+
+        var right = {
+            'x': width - 100,
+            'y': height - 100
+        }
+        var left = {
+            'x': 100,
+            'y': height - 100
+        }
+        var touches = []
+        var draw = {}
+
+    </script>
+    {% else %}
+    <script>
+        function upgrade_option(title, x, y, fill, color) {
+            upgrade.font = 'bold 20px arial'
+            upgrade.fillStyle = '#000000'
+            upgrade.lineWidth = 1
+            upgrade.fillText(title, x, y)
+
+            x += 10
+            y += 12
+            if (fill > 0) {
+                upgrade.fillStyle = color
+                upgrade.beginPath()
+                upgrade.arc(x, y, 10, Math.radian(90), Math.radian(270))
+                if (fill == 5) {
+                    upgrade.lineTo(x + 200, y + 10 * Math.sin(Math.radian(270)))
+                    upgrade.arc(x + 200, y, 10, Math.radian(270), Math.radian(90))
+                } else {
+                    upgrade.lineTo(x + 40 * fill, y + 10 * Math.sin(Math.radian(270)))
+                    upgrade.lineTo(x + 40 * fill, y + 10 * Math.sin(Math.radian(90)))
+                }
+                upgrade.lineTo(x, y + 10 * Math.sin(Math.radian(90)))
+                upgrade.fill()
+                upgrade.closePath()
+            }
+
+            upgrade.lineWidth = 2.5
+            upgrade.beginPath()
+            upgrade.arc(x, y, 10, Math.radian(90), Math.radian(270))
+            upgrade.lineTo(x + 200, y - 20 + 10 * Math.sin(Math.radian(90)))
+            upgrade.arc(x + 200, y, 10, Math.radian(270), Math.radian(90))
+            upgrade.lineTo(25, y + 10 * Math.sin(Math.radian(90)))
+            upgrade.stroke()
+            upgrade.closePath()
+
+            x -= 10
+            for (var i = 1; i < 5; i++) {
+                upgrade.beginPath()
+                upgrade.moveTo(x + 44 * i, y + 10 * Math.sin(Math.radian(270)))
+                upgrade.lineTo(x + 44 * i, y + 10 * Math.sin(Math.radian(90)))
+                upgrade.stroke()
+                upgrade.closePath()
+            }
+        }
+
+        function upgrade_option_draw(data) {
+            for (var i = 0; i < data.length; i++)upgrade_option(...data[i])
+        }
+
+        function draw_level() {
+            var text = `Level ${level}`
+            var x = center_x - canvas.measureText(text).width / 2
+            canvas.font = 'normal 18px Verdana'
+            canvas.fillStyle = '#000000'
+            canvas.fillText(text, x, height - 50)
+
+            canvas.beginPath()
+            canvas.fillStyle = '#00ff00'
+            canvas.rect(center_x - 250, height - 30, 500 * xp, 25)
+            canvas.fill()
+            canvas.closePath()
+
+            canvas.beginPath()
+            canvas.fillStyle = '#00ff00'
+            canvas.rect(center_x - 250, height - 30, 500, 25)
+            canvas.stroke()
+            canvas.closePath()
+        }
+
+        $('body').mousemove((mouse) => {
+            var distance_x = mouse.pageX - center_x
+            var distance_y = mouse.pageY - center_y
+            var direction = Math.degree(Math.atan(distance_y / distance_x))
+            if (distance_x < 0) direction += 180
+            player_status['direction'] = direction
+        }).mousedown((mouse) => {
+            player_status['shooting'] = true
+        }).mouseup((mouse) => {
+            player_status['shooting'] = false
+        }).keydown((event) => {
+            if (event.keyCode == 69) player_status['skill'] = true
+            if (event.keyCode == 32) player_status['shooting'] = true
+            if (event.keyCode == 87 || event.keyCode == 38) player_status['up'] = true
+            if (event.keyCode == 83 || event.keyCode == 40) player_status['down'] = true
+            if (event.keyCode == 65 || event.keyCode == 37) player_status['left'] = true
+            if (event.keyCode == 68 || event.keyCode == 39) player_status['right'] = true
+            for (var i = 0; i < 9; i++)if (event.keyCode == 49 + i) player_status[i + 1] = true
+        }).keyup((event) => {
+            if (event.keyCode == 77) {
+                if (show_map) {
+                    $('#map').hide()
+                    clearInterval(map_draw_loop)
+                    show_map = false
+                } else {
+                    $('#map').show()
+                    map_draw_loop = setInterval(map_draw, 100)
+                    show_map = true
+                }
+            }
+
+            for (var i = 1; i < 10; i++) player_status[i] = false
+            if (event.keyCode == 69) player_status['skill'] = false
+            if (event.keyCode == 32) player_status['shooting'] = false
+            if (event.keyCode == 87 || event.keyCode == 38) player_status['up'] = false
+            if (event.keyCode == 83 || event.keyCode == 40) player_status['down'] = false
+            if (event.keyCode == 65 || event.keyCode == 37) player_status['left'] = false
+            if (event.keyCode == 68 || event.keyCode == 39) player_status['right'] = false
+            if (event.keyCode == 81) player_status['shooting'] ? player_status['shooting'] = false : player_status['shooting'] = true
+        })
+    </script>
+    {% endif %}
+    {% endif %}
+
+</html>
