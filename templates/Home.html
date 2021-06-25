@@ -24,25 +24,6 @@
         <p style="width: 100%;" align="center"><a href="/Multiplayer Game/{{id}}/join">{{id}}</a></p>
         {% endfor %}
     </div>
-    {% elif page == 'create' %}
-    <div style="width: 260;">
-        <h1 align="center" style="width: 260;">Create Room</h1>
-        <form method="POST">
-            Width:
-            <input type="number" name="width" onchange="if(this.value<1000)this.value=1000" placeholder="1000"
-                style="position: absolute; width: 180; right: 0;">
-            <br>
-            Height:
-            <input type="number" name="height" onchange="if(this.value<1000)this.value=1000" placeholder="1000"
-                style="position: absolute; width: 180; right: 0;">
-            <br>
-            Password:
-            <input type="text" name="password" placeholder="None" style="position: absolute; width: 180; right: 0;">
-            <br>
-            <br>
-            <button class="btn btn-primary" style="width: 260;" type="submit">Create</button>
-        </form>
-    </div>
     {% else %}
     <div style="width: 400;">
         <h1 style="width: 100%;" align="center">Multiplayer Game</h1>
