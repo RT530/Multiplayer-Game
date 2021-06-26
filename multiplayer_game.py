@@ -1,13 +1,13 @@
 from multiprocessing.pool import ThreadPool
 from threading import Timer
 from time import time
+import webbrowser
 
 from lib.check_import import check_import
 from lib.code import get_random_code
 from lib.enforce import enforce
 
 check_import('Flask', 'numpy')
-
 from flask import Flask, render_template, redirect, request
 from numpy import cos, pi, sin, sqrt, power, abs
 
@@ -212,4 +212,6 @@ def multiplayer_game_shooting(room_id):
     return ''
 
 
+# Start server
+webbrowser.open('http://127.0.0.1:5000/Multiplayer%20Game')
 app.run()
