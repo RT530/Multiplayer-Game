@@ -18,11 +18,19 @@
 </head>
 
 <body>
+    {% if page == 'display' %}
+    <div style="overflow: scroll; width: 175; height: 205; border: 1px solid #000000;">
+        {% for id in room %}
+        <p style="width: 100%;" align="center"><a href="/Multiplayer Game/{{id}}/join">{{id}}</a></p>
+        {% endfor %}
+    </div>
+    {% else %}
     <div style="width: 400;">
         <h1 style="width: 100%;" align="center">Multiplayer Game</h1>
         <a href="/Multiplayer Game/create"><button style="width: 100%;" class="btn btn-primary">Create Room</button></a>
         <a href="/Multiplayer Game/room"><button style="width: 100%;" class="btn btn-primary">Join Room</button></a>
     </div>
+    {% endif %}
 
     <script>
         $('div').center()

@@ -211,6 +211,11 @@ def multiplayer_game_shoot(room_id):
                 }
     return ''
 
+# Link URL "/Multiplayer Game/room" to function multiplayer_game_room
+@app.route('/Multiplayer Game/room')
+def multiplayer_game_display():
+    # Show join room page
+    return render_template('Home.html', page='display')
 
 @app.route('/extra.js')
 def extra():
