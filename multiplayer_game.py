@@ -8,7 +8,7 @@ from lib.enforce import enforce
 
 check_import('Flask', 'numpy')
 
-from flask import Flask, render_template, send_file, redirect, request
+from flask import Flask, render_template, redirect, request
 from numpy import cos, pi, sin, sqrt, power, abs
 
 
@@ -43,8 +43,9 @@ class Room:
     def clean_offline_player(self):
         for player_id in room[self.room_id]['players']:
             player = room[self.room_id]['players'][player_id]
-            # If lass update time is more then 2.5 second then delete player from the room
+            # If lass update time is more then 2.5 second
             if player['time'] + 2.5 < time():
+                # Delete player from the room
                 del room[self.room_id]['players'][player_id]
 
     def bullet(self, bullet_id):
@@ -124,12 +125,12 @@ def multiplayer_game_room(room_id):
         player_id = get_random_code()
         # Defined new player dictionary
         room[room_id]['players'][player_id] = {
-            'hp': 1000,  # Defined hp in player
-            'x': -1000000,  # Defined x in player
-            'y': -1000000,  # Defined y in player
-            'direction': 0,  # Defined direction in player
-            'time': time(),  # Defined last update time in player
-            'shoot_time': time() + 1  # Defined last shoot time in player
+            'hp': 1000,  # Defined hp for player
+            'x': -1000000,  # Defined x coordinate for player
+            'y': -1000000,  # Defined y coordinate for player
+            'direction': 0,  # Defined direction for player
+            'time': time(),  # Defined last update time for player
+            'shoot_time': time() + 1  # Defined last shoot time for player
         }
 
         # Show game page with room_id and player_id variable giving
@@ -187,19 +188,26 @@ def multiplayer_game_update(room_id):
         return {'error': 'No such room'}
 
 
-@app.route('/Multiplayer Game/<room_id>/shooting', methods=['POST'])
+# Link URL "/Multiplayer Game/<room_id>/shoot" to function multiplayer_game_shooting
+@app.route('/Multiplayer Game/<room_id>/shoot', methods=['POST'])
 def multiplayer_game_shooting(room_id):
+    # Is room exist
     if room_id in room:
+        # Get request from POST
         requests = request.form.get
+        # Is player exist
         if requests('player_id') in room[room_id]['players']:
             player = room[room_id]['players'][requests('player_id')]
+            # If last shoot time is more then 0.25 second
             if player['shoot_time'] + 0.25 < time():
+                # Update last shoot time
                 player['shoot_time'] = time()
+                # Add new bullet to room
                 room[room_id]['bullets'][get_random_code()] = {
-                    'x': player['x'],
-                    'y': player['y'],
-                    'id': requests('player_id'),
-                    'direction': player['direction']
+                    'x': player['x'],  # Defined x coordinate for bullet
+                    'y': player['y'],  # Defined y coordinate for bullet
+                    'id': requests('player_id'),  # Defined id for bullet
+                    'direction': player['direction']  # Defined direction for bullet
                 }
     return ''
 
