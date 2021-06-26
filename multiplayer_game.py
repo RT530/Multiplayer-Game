@@ -9,7 +9,7 @@ from lib.enforce import enforce
 check_import('Flask', 'numpy')
 
 from flask import Flask, render_template, send_file, redirect, request
-from numpy import cos, pi, sin, sqrt, power
+from numpy import cos, pi, sin, sqrt, power, abs
 
 
 class Room:
@@ -27,17 +27,23 @@ class Room:
             if 0 < player['hp'] < 1000:
                 player['hp'] += 1
 
+        # Get all bullet id
         bullets_id = [bullet_id for bullet_id in room[self.room_id]['bullets']]
+        # If there is any bullet
         if len(bullets_id) > 0:
+            # Update all bullet in one time
             ThreadPool(len(bullets_id)).map(self.bullet, bullets_id)
 
         # Loop
         Timer(0.01, self.update).start()
 
+    # Enforce function clean_offline_player
     @enforce()
+    # Clear all offline player
     def clean_offline_player(self):
         for player_id in room[self.room_id]['players']:
             player = room[self.room_id]['players'][player_id]
+            # If lass update time is more then 2.5 second then delete player from the room
             if player['time'] + 2.5 < time():
                 del room[self.room_id]['players'][player_id]
 
@@ -48,8 +54,8 @@ class Room:
         # Is the person that shoot the bullet still online
         if bullet['id'] in room[self.room_id]['players']:
             player = room[self.room_id]['players'][bullet['id']]
-            # Is the bullet in the game area
-            # Is the person that shoot the bullet still alive
+            # Is the bullet in the game area and
+            # is the person that shoot the bullet still alive
             if -50 < bullet['x'] < 1050 and -50 < bullet['y'] < 1050 and player['hp'] > 0:
                 # Move the bullet
                 bullet['x'] += 2.5 * cos(bullet['direction'] * pi / 180)
@@ -61,7 +67,7 @@ class Room:
                         continue
 
                     player = room[self.room_id]['players'][player_id]
-                    # If it hit
+                    # If it hit and hit player hp is not zero
                     if get_distance(player, bullet) < 15 and player['hp'] > 0:
                         # Delete the bullet
                         del room[self.room_id]['bullets'][bullet_id]
@@ -74,6 +80,7 @@ class Room:
         del room[self.room_id]['bullets'][bullet_id]
 
 
+# Get distance between two dictionary
 def get_distance(a, b):
     return abs(sqrt(power(a['x'] - b['x'], 2) + power(a['y'] - b['y'], 2)))
 
@@ -84,77 +91,88 @@ room = {}
 app = Flask(__name__)
 
 
-# When call URL "/Multiplayer Game" run multiplayer_game_home
+# Link URL "/Multiplayer Game" to function multiplayer_game_home
 @app.route('/Multiplayer Game')
 def multiplayer_game_home():
     return render_template('Home.html')
 
 
+# Link URL "/Multiplayer Game/create" to function multiplayer_game_create
 @app.route('/Multiplayer Game/create')
 def multiplayer_game_create():
+    # Generate random room id
     room_id = get_random_code()
+    # Defined new room dictionary
     room[room_id] = {
-        'players': {},
-        'bullets': {}
+        'players': {},  # Defined players dictionary in room
+        'bullets': {}  # Defined bullets dictionary in room
     }
 
-    # Start room
+    # Start room loop
     Room(room_id)
 
     # Redirect to the game page
     return redirect(f'/Multiplayer Game/{room_id}')
 
 
+# Link URL "/Multiplayer Game/<room_id>" to function multiplayer_game_room
 @app.route('/Multiplayer Game/<room_id>')
 def multiplayer_game_room(room_id):
+    # Is room exist
     if room_id in room:
+        # Generate random player id
         player_id = get_random_code()
+        # Defined new player dictionary
         room[room_id]['players'][player_id] = {
-            'hp': 1000,
-            'x': -1000000,
-            'y': -1000000,
-            'direction': 0,
-            'time': time(),
-            'shoot_time': time() + 1
+            'hp': 1000,  # Defined hp in player
+            'x': -1000000,  # Defined x in player
+            'y': -1000000,  # Defined y in player
+            'direction': 0,  # Defined direction in player
+            'time': time(),  # Defined last update time in player
+            'shoot_time': time() + 1  # Defined last shoot time in player
         }
 
+        # Show game page with room_id and player_id variable giving
         return render_template('Game.html', room_id=room_id, player_id=player_id)
+
+    # Redirect to the home page
     return redirect('/Multiplayer Game')
 
 
+# Link URL "/Multiplayer Game/<room_id>/update" to function multiplayer_game_update
 @app.route('/Multiplayer Game/<room_id>/update', methods=['POST'])
 def multiplayer_game_update(room_id):
+    # Is room exist
     if room_id in room:
+        # Get request from POST
         requests = request.form.get
+        # Is player exist
         if requests('player_id') in room[room_id]['players']:
             player = room[room_id]['players'][requests('player_id')]
+            # Update last update time
             player['time'] = time()
+            # Update x coordinate
             player['x'] = -float(requests('x'))
+            # Update y coordinate
             player['y'] = -float(requests('y'))
+            # Update direction
             player['direction'] = float(requests('direction'))
 
+            # Get all player data
             players = []
             for player_id in room[room_id]['players']:
                 if player_id == requests('player_id'):
                     continue
                 player = room[room_id]['players'][player_id]
                 if player['hp'] > 0:
-                    players.append({
-                        'x': player['x'],
-                        'y': player['y'],
-                        'hp': player['hp'] / 1000,
-                        'direction': player['direction']
-                    })
+                    players.append(player)
 
+            # Get all bullet data
             bullets = []
             for bullet_id in room[room_id]['bullets']:
-                bullet = room[room_id]['bullets'][bullet_id]
-                bullets.append({
-                    'x': bullet['x'],
-                    'y': bullet['y'],
-                    'id': bullet['id']
-                })
+                bullets.append(room[room_id]['bullets'][bullet_id])
 
+            # Return all players, bullets, and player hp
             player = room[room_id]['players'][requests('player_id')]
             return {
                 'players': players,
@@ -162,8 +180,10 @@ def multiplayer_game_update(room_id):
                 'hp': player['hp'] / 1000
             }
         else:
+            # Return error message if player is not find
             return {'error': 'No such player'}
     else:
+        # Return error message if room is not find
         return {'error': 'No such room'}
 
 
@@ -182,11 +202,6 @@ def multiplayer_game_shooting(room_id):
                     'direction': player['direction']
                 }
     return ''
-
-
-@app.route('/data/extra.js')
-def extra():
-    return send_file('templates/extra.js')
 
 
 app.run()
