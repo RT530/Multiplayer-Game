@@ -1,6 +1,3 @@
-
-
-
 from functools import wraps
 from time import sleep
 
@@ -16,7 +13,7 @@ def enforce(redo=None, sleep_time=0):
                     except:
                         sleep(sleep_time)
             else:
-                for i in range(redo-1):
+                for i in range(redo - 1):
                     try:
                         return func(*args, **kwargs)
                     except:

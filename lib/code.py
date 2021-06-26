@@ -1,6 +1,3 @@
-
-
-
 from binascii import hexlify
 from random import random
 from hashlib import sha1
