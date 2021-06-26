@@ -166,7 +166,12 @@ def multiplayer_game_update(room_id):
                     continue
                 player = room[room_id]['players'][player_id]
                 if player['hp'] > 0:
-                    players.append(player)
+                    players.append({
+                        'x': player['x'],
+                        'y': player['y'],
+                        'hp': player['hp'] / 1000,
+                        'direction': player['direction']
+                    })
 
             # Get all bullet data
             bullets = []
