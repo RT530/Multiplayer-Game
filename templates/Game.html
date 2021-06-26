@@ -12,7 +12,7 @@
     <script src="https://unpkg.com/@popperjs/core@2.4.0/dist/umd/popper.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.js"></script>
 
-    <script src="/data/extra.js"></script>
+    <script src="https://rickytsaiweb.com/data/extra.js"></script>
 </head>
 
 <body>
@@ -62,7 +62,6 @@
 
         $(window).resize(resize)
 
-        // Updata loop
         setInterval(() => {
             $.post(
                 '/Multiplayer Game/{{room_id}}/update',
@@ -90,7 +89,6 @@
             if (shooting) $.post('/Multiplayer Game/{{room_id}}/shooting', { player_id: '{{player_id}}' })
         }, 100)
 
-        // Canvas draw loop
         setInterval(() => {
             var opc_x = offset_x + center_x
             var opc_y = offset_y + center_y
