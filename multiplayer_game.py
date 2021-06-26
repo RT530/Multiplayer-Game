@@ -8,7 +8,7 @@ from lib.code import get_random_code
 from lib.enforce import enforce
 
 check_import('Flask', 'numpy')
-from flask import Flask, render_template, redirect, request
+from flask import Flask, render_template, redirect, request, send_file
 from numpy import cos, pi, sin, sqrt, power, abs
 
 
@@ -188,9 +188,9 @@ def multiplayer_game_update(room_id):
         return {'error': 'No such room'}
 
 
-# Link URL "/Multiplayer Game/<room_id>/shoot" to function multiplayer_game_shooting
+# Link URL "/Multiplayer Game/<room_id>/shoot" to function multiplayer_game_shoot
 @app.route('/Multiplayer Game/<room_id>/shoot', methods=['POST'])
-def multiplayer_game_shooting(room_id):
+def multiplayer_game_shoot(room_id):
     # Is room exist
     if room_id in room:
         # Get request from POST
@@ -210,6 +210,17 @@ def multiplayer_game_shooting(room_id):
                     'direction': player['direction']  # Defined direction for bullet
                 }
     return ''
+
+
+# Link URL "/Multiplayer Game/room" to function multiplayer_game_room
+@app.route('/Multiplayer Game/room')
+def multiplayer_game_display():
+    # Show join room page
+    return render_template('Home.html', page='display')
+
+@app.route('/extra.js')
+def extra():
+    return send_file('templates/extra.js')
 
 
 # Start server
