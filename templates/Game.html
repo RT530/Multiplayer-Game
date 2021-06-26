@@ -86,7 +86,7 @@
                     players = data['players']
                     bullets = data['bullets']
                 })
-            if (shooting) $.post('/Multiplayer Game/{{room_id}}/shooting', { player_id: '{{player_id}}' })
+            if (shooting) $.post('/Multiplayer Game/{{room_id}}/shoot', { player_id: '{{player_id}}' })
         }, 100)
 
         setInterval(() => {
