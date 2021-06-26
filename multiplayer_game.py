@@ -49,36 +49,52 @@ class Room:
                 del room[self.room_id]['players'][player_id]
 
     def bullet(self, bullet_id):
-        # Get bullet for dictionary
-        bullet = room[self.room_id]['bullets'][bullet_id]
+        # Is the bullet exist
+        if bullet_id in room[self.room_id]['bullets']:
+            # Get bullet for dictionary
+            bullet = room[self.room_id]['bullets'][bullet_id]
 
-        # Is the person that shoot the bullet still online
-        if bullet['id'] in room[self.room_id]['players']:
-            player = room[self.room_id]['players'][bullet['id']]
-            # Is the bullet in the game area and
-            # is the person that shoot the bullet still alive
-            if -50 < bullet['x'] < 1050 and -50 < bullet['y'] < 1050 and player['hp'] > 0:
-                # Move the bullet
-                bullet['x'] += 2.5 * cos(bullet['direction'] * pi / 180)
-                bullet['y'] += 2.5 * sin(bullet['direction'] * pi / 180)
+            # Is the person that shoot the bullet still online
+            if bullet['id'] in room[self.room_id]['players']:
+                player = room[self.room_id]['players'][bullet['id']]
+                # Is the bullet in the game area and
+                # is the person that shoot the bullet still alive
+                if -50 < bullet['x'] < 1050 and -50 < bullet['y'] < 1050 and player['hp'] > 0:
+                    # Move the bullet
+                    bullet['x'] += 2.5 * cos(bullet['direction'] * pi / 180)
+                    bullet['y'] += 2.5 * sin(bullet['direction'] * pi / 180)
 
-                # See does the bullet hit any player
-                for player_id in room[self.room_id]['players']:
-                    if player_id == bullet['id']:
-                        continue
+                    # See does the bullet hit any player
+                    for player_id in room[self.room_id]['players']:
+                        if player_id == bullet['id']:
+                            continue
 
-                    player = room[self.room_id]['players'][player_id]
-                    # If it hit and hit player hp is not zero
-                    if get_distance(player, bullet) < 15 and player['hp'] > 0:
-                        # Delete the bullet
-                        del room[self.room_id]['bullets'][bullet_id]
-                        # Decrease player hp
-                        player['hp'] -= 100
-                        return
-                return
+                        player = room[self.room_id]['players'][player_id]
+                        # If it hit and hit player hp is not zero
+                        if get_distance(bullet, player) < 15 and player['hp'] > 0:
+                            # Delete the bullet
+                            del room[self.room_id]['bullets'][bullet_id]
+                            # Decrease player hp
+                            player['hp'] -= 100
+                            return
 
-        # Delete the bullet
-        del room[self.room_id]['bullets'][bullet_id]
+                    # See does the bullet hit any other bullets
+                    for bullet2_id in room[self.room_id]['bullets']:
+                        bullet2 = room[self.room_id]['bullets'][bullet2_id]
+
+                        if bullet2['id'] == bullet['id']:
+                            continue
+
+                        # If it hit
+                        if get_distance(bullet, bullet2) < 10:
+                            # Delete the bullet
+                            del room[self.room_id]['bullets'][bullet_id]
+                            del room[self.room_id]['bullets'][bullet2_id]
+                            return
+                    return
+
+            # Delete the bullet
+            del room[self.room_id]['bullets'][bullet_id]
 
 
 # Get distance between two dictionary
@@ -215,6 +231,13 @@ def multiplayer_game_shoot(room_id):
                     'direction': player['direction']  # Defined direction for bullet
                 }
     return ''
+
+
+# Link URL "/Multiplayer Game/room" to function multiplayer_game_room
+@app.route('/Multiplayer Game/room')
+def multiplayer_game_display():
+    # Show join room page
+    return render_template('Home.html', page='display',room=room)
 
 
 @app.route('/extra.js')
