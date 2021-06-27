@@ -21,7 +21,6 @@ class Room:
         self.update()
 
     def update(self):
-
         if room[self.room_id]['join'] > 0 or self.time + 30 < time():
             self.clean_offline_player()
             # Does the room have any player
@@ -85,6 +84,8 @@ class Room:
                             del room[self.room_id]['bullets'][bullet_id]
                             # Decrease player hp
                             player['hp'] -= 100
+                            if player['hp'] <= 0:
+                                player['kill_by'] = room[self.room_id]['players'][bullet['id']]['name']
                             return
 
                     # See does the bullet hit any other bullets
@@ -181,15 +182,22 @@ def multiplayer_game_join(room_id):
 
             # Generate random player id
             player_id = get_random_code()
+
+            if request.form.get('name') == '':
+                name = player_id
+            else:
+                name = request.form.get('name')
+
             # Defined new player dictionary
             room[room_id]['players'][player_id] = {
                 'hp': 1000,  # Defined hp for player
+                'kill_by': None,  # Defined kill_by for player
                 'x': -1000000,  # Defined x coordinate for player
                 'y': -1000000,  # Defined y coordinate for player
                 'direction': 0,  # Defined direction for player
                 'time': time(),  # Defined last update time for player
                 'shoot_time': time() + 1,  # Defined last shoot time for player
-                'name': request.form.get('name')  # Save player name
+                'name': name  # Save player name
             }
             room[room_id]['join'] += 1
             session['player_id'] = player_id
@@ -261,7 +269,8 @@ def multiplayer_game_update(room_id):
             return {
                 'players': players,
                 'bullets': bullets,
-                'hp': player['hp'] / 1000
+                'hp': player['hp'] / 1000,
+                'kill_by': player['kill_by']
             }
         else:
             # Return error message if player is not find
