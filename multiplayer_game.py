@@ -293,5 +293,5 @@ def extra():
 
 
 # Start server
-# webbrowser.open('http://127.0.0.1:5000/Multiplayer%20Game')
+webbrowser.open('http://127.0.0.1:5000/Multiplayer%20Game')
 app.run()
