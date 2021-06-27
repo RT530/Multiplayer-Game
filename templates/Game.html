@@ -22,8 +22,13 @@
         <h1 align="center" style="width: 260;">Join Room</h1>
         <form method="POST">
             Name:
-            <input id="name" type="text" name="name" style="position: absolute; width: 180; right: 0;">
+            <input id="name" type="text" name="name" value="{{name}}" style="position: absolute; width: 180; right: 0;">
             <br>
+            {% if password %}
+            Password:
+            <input type="password" name="password" style="position: absolute; width: 180; right: 0;">
+            <br>
+            {% endif %}
             <br>
             <button class="btn btn-primary" style="width: 260;" type="submit">Join</button>
         </form>

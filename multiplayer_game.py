@@ -4,7 +4,7 @@ from time import time
 import webbrowser
 
 from lib.check_import import check_import
-from lib.code import get_random_code
+from lib.code import get_random_code, get_code
 from lib.enforce import enforce
 
 check_import('Flask', 'numpy')
@@ -16,15 +16,14 @@ class Room:
     def __init__(self, room_id):
         self.room_id = room_id
         self.time = time()
-        self.join = 0
 
         # Start update
         self.update()
 
     def update(self):
-        self.clean_offline_player()
 
-        if self.join > 0 or self.time + 30 < time():
+        if room[self.room_id]['join'] > 0 or self.time + 30 < time():
+            self.clean_offline_player()
             # Does the room have any player
             if len(room[self.room_id]['players']) == 0:
                 # Delete room
@@ -141,21 +140,28 @@ def multiplayer_game_create():
             height = 1000
         else:
             height = int(requests('height'))
+        if requests('password') == '':
+            password = None
+        else:
+            password = get_code(requests('password'))
 
         # Generate random room id
         room_id = get_random_code()
         # Defined new room dictionary
         room[room_id] = {
+            'join': 0,  # Defined join in room
             'players': {},  # Defined players dictionary in room
             'bullets': {},  # Defined bullets dictionary in room
-            'size': [width, height]  # Save room size
+            'size': [width, height],  # Save room size
+            'password': password  # Save password code
         }
 
         # Start room loop
         Room(room_id)
 
+        session['pass'] = True
         # Redirect to the game page
-        return redirect(f'/Multiplayer Game/{room_id}')
+        return redirect(f'/Multiplayer Game/{room_id}/join')
 
 
 # Link URL "/Multiplayer Game/<room_id>/join" to function multiplayer_game_join
@@ -163,8 +169,16 @@ def multiplayer_game_create():
 def multiplayer_game_join(room_id):
     if room_id in room:
         if request.method == 'GET':
-            return render_template('Game.html')
+            if room[room_id]['password'] is None or 'pass' in session:
+                return render_template('Game.html')
+            return render_template('Game.html', password=True)
         else:
+            requests = request.form.get
+
+            if room[room_id]['password'] is not None:
+                if get_code(requests('password')) != room[room_id]['password'] and 'pass' not in session:
+                    return render_template('Game.html', password=True, name=requests('name'))
+
             # Generate random player id
             player_id = get_random_code()
             # Defined new player dictionary
@@ -177,6 +191,7 @@ def multiplayer_game_join(room_id):
                 'shoot_time': time() + 1,  # Defined last shoot time for player
                 'name': request.form.get('name')  # Save player name
             }
+            room[room_id]['join'] += 1
             session['player_id'] = player_id
             session['room_id'] = room_id
             session['pass'] = True
