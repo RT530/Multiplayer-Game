@@ -170,7 +170,7 @@ def multiplayer_game_room(room_id):
             'shoot_time': time() + 1  # Defined last shoot time for player
         }
 
-        # Show game page with room_id and player_id variable giving
+        # Show game page with room_id, player_id and room_size variable giving
         return render_template('Game.html', room_id=room_id, player_id=player_id, room_size=room[room_id]['size'])
 
     # Redirect to the home page
