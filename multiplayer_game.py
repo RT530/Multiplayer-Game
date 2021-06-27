@@ -59,7 +59,8 @@ class Room:
                 player = room[self.room_id]['players'][bullet['id']]
                 # Is the bullet in the game area and
                 # is the person that shoot the bullet still alive
-                if -50 < bullet['x'] < 1050 and -50 < bullet['y'] < 1050 and player['hp'] > 0:
+                width, height = room[self.room_id]['size']
+                if -50 < bullet['x'] < width + 50 and -50 < bullet['y'] < height + 50 and player['hp'] > 0:
                     # Move the bullet
                     bullet['x'] += 2.5 * cos(bullet['direction'] * pi / 180)
                     bullet['y'] += 2.5 * sin(bullet['direction'] * pi / 180)
@@ -115,21 +116,36 @@ def multiplayer_game_home():
 
 
 # Link URL "/Multiplayer Game/create" to function multiplayer_game_create
-@app.route('/Multiplayer Game/create')
+@app.route('/Multiplayer Game/create', methods=['GET', 'POST'])
 def multiplayer_game_create():
-    # Generate random room id
-    room_id = get_random_code()
-    # Defined new room dictionary
-    room[room_id] = {
-        'players': {},  # Defined players dictionary in room
-        'bullets': {}  # Defined bullets dictionary in room
-    }
+    if request.method == 'GET':
+        return render_template('Home.html', page='create')
+    else:
+        requests = request.form.get
 
-    # Start room loop
-    Room(room_id)
+        if requests('width') == '':
+            width = 1000
+        else:
+            width = int(requests('width'))
+        if requests('height') == '':
+            height = 1000
+        else:
+            height = int(requests('height'))
 
-    # Redirect to the game page
-    return redirect(f'/Multiplayer Game/{room_id}')
+        # Generate random room id
+        room_id = get_random_code()
+        # Defined new room dictionary
+        room[room_id] = {
+            'players': {},  # Defined players dictionary in room
+            'bullets': {},  # Defined bullets dictionary in room
+            'size': [width, height]  # Save room size
+        }
+
+        # Start room loop
+        Room(room_id)
+
+        # Redirect to the game page
+        return redirect(f'/Multiplayer Game/{room_id}')
 
 
 # Link URL "/Multiplayer Game/<room_id>" to function multiplayer_game_room
@@ -150,7 +166,7 @@ def multiplayer_game_room(room_id):
         }
 
         # Show game page with room_id and player_id variable giving
-        return render_template('Game.html', room_id=room_id, player_id=player_id)
+        return render_template('Game.html', room_id=room_id, player_id=player_id, room_size=room[room_id]['size'])
 
     # Redirect to the home page
     return redirect('/Multiplayer Game')
@@ -237,7 +253,7 @@ def multiplayer_game_shoot(room_id):
 @app.route('/Multiplayer Game/room')
 def multiplayer_game_display():
     # Show join room page
-    return render_template('Home.html', page='display',room=room)
+    return render_template('Home.html', page='display', room=room)
 
 
 @app.route('/extra.js')

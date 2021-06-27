@@ -38,7 +38,7 @@
         var width = window.innerWidth
         var height = window.innerHeight
 
-        var size = [1000, 1000]
+        var size = JSON.parse('{{room_size}}')
 
         var offset_x = -Math.random() * 1000
         var offset_y = -Math.random() * 1000
@@ -146,11 +146,10 @@
             if (left) dx < max_speed ? dx += speed : dx = max_speed
             if (right) dx > -max_speed ? dx -= speed : dx = max_speed
 
-
             if (offset_x > -10) offset_x = -10
             if (offset_y > -10) offset_y = -10
-            if (offset_x < -990) offset_x = -990
-            if (offset_y < -990) offset_y = -990
+            if (offset_x < -size[0] + 10) offset_x = -size[0] + 10
+            if (offset_y < -size[1] + 10) offset_y = -size[1] + 10
         }, 60 / 1000)
 
         function draw_bullet(id, x, y) {
