@@ -8,39 +8,43 @@ from lib.code import get_random_code
 from lib.enforce import enforce
 
 check_import('Flask', 'numpy')
-from flask import Flask, render_template, redirect, request, send_file
+from flask import Flask, render_template, redirect, request, send_file, session
 from numpy import cos, pi, sin, sqrt, power, abs
 
 
 class Room:
     def __init__(self, room_id):
         self.room_id = room_id
+        self.time = time()
+        self.join = 0
 
         # Start update
-        Timer(0.5, self.update).start()
+        self.update()
 
     def update(self):
         self.clean_offline_player()
 
-        # Does the room have any player
-        if len(room[self.room_id]['players']) > 0:
-            for player_id in room[self.room_id]['players']:
-                player = room[self.room_id]['players'][player_id]
-                if 0 < player['hp'] < 1000:
-                    player['hp'] += 1
+        if self.join > 0 or self.time + 30 < time():
+            # Does the room have any player
+            if len(room[self.room_id]['players']) == 0:
+                # Delete room
+                del room[self.room_id]
+                return
 
-            # Get all bullet id
-            bullets_id = [bullet_id for bullet_id in room[self.room_id]['bullets']]
-            # If there is any bullet
-            if len(bullets_id) > 0:
-                # Update all bullet in one time
-                ThreadPool(len(bullets_id)).map(self.bullet, bullets_id)
+        for player_id in room[self.room_id]['players']:
+            player = room[self.room_id]['players'][player_id]
+            if 0 < player['hp'] < 1000:
+                player['hp'] += 1
 
-            # Loop
-            Timer(0.01, self.update).start()
-        else:
-            # Delete room
-            del room[self.room_id]
+        # Get all bullet id
+        bullets_id = [bullet_id for bullet_id in room[self.room_id]['bullets']]
+        # If there is any bullet
+        if len(bullets_id) > 0:
+            # Update all bullet in one time
+            ThreadPool(len(bullets_id)).map(self.bullet, bullets_id)
+
+        # Loop
+        Timer(0.01, self.update).start()
 
     # Enforce function clean_offline_player
     @enforce()
@@ -112,6 +116,7 @@ def get_distance(a, b):
 room = {}
 # Defined server
 app = Flask(__name__)
+app.secret_key = '12345'
 
 
 # Link URL "/Multiplayer Game" to function multiplayer_game_home
@@ -153,25 +158,46 @@ def multiplayer_game_create():
         return redirect(f'/Multiplayer Game/{room_id}')
 
 
+# Link URL "/Multiplayer Game/<room_id>/join" to function multiplayer_game_join
+@app.route('/Multiplayer Game/<room_id>/join', methods=['GET', 'POST'])
+def multiplayer_game_join(room_id):
+    if room_id in room:
+        if request.method == 'GET':
+            return render_template('Game.html')
+        else:
+            # Generate random player id
+            player_id = get_random_code()
+            # Defined new player dictionary
+            room[room_id]['players'][player_id] = {
+                'hp': 1000,  # Defined hp for player
+                'x': -1000000,  # Defined x coordinate for player
+                'y': -1000000,  # Defined y coordinate for player
+                'direction': 0,  # Defined direction for player
+                'time': time(),  # Defined last update time for player
+                'shoot_time': time() + 1,  # Defined last shoot time for player
+                'name': request.form.get('name')  # Save player name
+            }
+            session['player_id'] = player_id
+            session['room_id'] = room_id
+            session['pass'] = True
+
+            return redirect(f'/Multiplayer Game/{room_id}')
+    else:
+        return redirect('/Multiplayer Game/room')
+
+
 # Link URL "/Multiplayer Game/<room_id>" to function multiplayer_game_room
 @app.route('/Multiplayer Game/<room_id>')
 def multiplayer_game_room(room_id):
     # Is room exist
     if room_id in room:
-        # Generate random player id
-        player_id = get_random_code()
-        # Defined new player dictionary
-        room[room_id]['players'][player_id] = {
-            'hp': 1000,  # Defined hp for player
-            'x': -1000000,  # Defined x coordinate for player
-            'y': -1000000,  # Defined y coordinate for player
-            'direction': 0,  # Defined direction for player
-            'time': time(),  # Defined last update time for player
-            'shoot_time': time() + 1  # Defined last shoot time for player
-        }
-
-        # Show game page with room_id and player_id variable giving
-        return render_template('Game.html', room_id=room_id, player_id=player_id, room_size=room[room_id]['size'])
+        if 'pass' in session:
+            session.pop('pass', None)
+            # Show game page with room_id and player_id variable giving
+            return render_template('Game.html', room_size=room[room_id]['size'])
+        else:
+            # Redirect to the join page
+            return redirect(f'/Multiplayer Game/{room_id}/join')
 
     # Redirect to the home page
     return redirect('/Multiplayer Game')
@@ -267,5 +293,5 @@ def extra():
 
 
 # Start server
-webbrowser.open('http://127.0.0.1:5000/Multiplayer%20Game')
+# webbrowser.open('http://127.0.0.1:5000/Multiplayer%20Game')
 app.run()
