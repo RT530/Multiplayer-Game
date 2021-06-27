@@ -15,6 +15,40 @@
     <script src="/extra.js"></script>
 </head>
 
+{% if 'join' in request.url %}
+
+<body style="height: 100%; overflow: hidden;">
+    <div style="width: 260;">
+        <h1 align="center" style="width: 260;">Join Room</h1>
+        <form method="POST">
+            Name:
+            <input id="name" type="text" name="name" style="position: absolute; width: 180; right: 0;">
+            <br>
+            <br>
+            <button class="btn btn-primary" style="width: 260;" type="submit">Join</button>
+        </form>
+    </div>
+
+    <script>
+        $('div').center()
+
+        $(window).resize(() => {
+            $('div').center()
+        })
+
+        if (is_mobile()) {
+            if (location.href.indexOf('?mobile') == -1) location.href = `${location.href}?mobile=true`
+
+            $('body').append(
+                '<a href="/Multiplayer Game" style="position: absolute; top: 5; left: 5;">' +
+                '<button class="btn btn-primary" style="width: 75;">Home</button>' +
+                '</a>'
+            )
+        }
+    </script>
+</body>
+{% else %}
+
 <body>
     <canvas id="game" style="position: absolute;"></canvas>
 
@@ -64,7 +98,7 @@
 
         setInterval(() => {
             $.post(
-                '/Multiplayer Game/{{room_id}}/update',
+                "/Multiplayer Game/{{session['room_id']}}/update",
                 {
                     x: offset_x,
                     y: offset_y,
@@ -75,7 +109,7 @@
                     right: right,
                     direction: direction,
 
-                    player_id: '{{player_id}}'
+                    player_id:  "{{session['player_id']}}"
                 }, (data) => {
                     if (data['error']) {
                         if (data['error'] == 'No such player') location.reload()
@@ -86,7 +120,7 @@
                     players = data['players']
                     bullets = data['bullets']
                 })
-            if (shooting) $.post('/Multiplayer Game/{{room_id}}/shoot', { player_id: '{{player_id}}' })
+            if (shooting) $.post("/Multiplayer Game/{{session['room_id']}}/shoot", { player_id: "{{session['player_id']}}" })
         }, 100)
 
         setInterval(() => {
@@ -153,7 +187,7 @@
         }, 60 / 1000)
 
         function draw_bullet(id, x, y) {
-            if (id == "{{player_id}}") {
+            if (id == "{{session['player_id']}}") {
                 canvas.fillStyle = '#0000ff'
             } else {
                 canvas.fillStyle = '#ff0000'
@@ -245,5 +279,7 @@
             if (event.keyCode == 68 || event.keyCode == 39) right = false
         })
     </script>
+</body>
+{% endif %}
 
 </html>
