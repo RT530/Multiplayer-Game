@@ -16,26 +16,31 @@ class Room:
     def __init__(self, room_id):
         self.room_id = room_id
 
-        # Start update
-        self.update()
+       # Start update
+        Timer(0.5, self.update).start()
 
     def update(self):
         self.clean_offline_player()
 
-        for player_id in room[self.room_id]['players']:
-            player = room[self.room_id]['players'][player_id]
-            if 0 < player['hp'] < 1000:
-                player['hp'] += 1
+        # Does the room have any player
+        if len(room[self.room_id]['players']) > 0:
+            for player_id in room[self.room_id]['players']:
+                player = room[self.room_id]['players'][player_id]
+                if 0 < player['hp'] < 1000:
+                    player['hp'] += 1
 
-        # Get all bullet id
-        bullets_id = [bullet_id for bullet_id in room[self.room_id]['bullets']]
-        # If there is any bullet
-        if len(bullets_id) > 0:
-            # Update all bullet in one time
-            ThreadPool(len(bullets_id)).map(self.bullet, bullets_id)
+            # Get all bullet id
+            bullets_id = [bullet_id for bullet_id in room[self.room_id]['bullets']]
+            # If there is any bullet
+            if len(bullets_id) > 0:
+                # Update all bullet in one time
+                ThreadPool(len(bullets_id)).map(self.bullet, bullets_id)
 
-        # Loop
-        Timer(0.01, self.update).start()
+            # Loop
+            Timer(0.01, self.update).start()
+        else:
+            # Delete room
+            del room[self.room_id]
 
     # Enforce function clean_offline_player
     @enforce()
