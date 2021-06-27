@@ -16,15 +16,13 @@ class Room:
     def __init__(self, room_id):
         self.room_id = room_id
         self.time = time()
-        self.join = 0
 
         # Start update
         self.update()
 
     def update(self):
-        self.clean_offline_player()
-
-        if self.join > 0 or self.time + 30 < time():
+        if room[self.room_id]['join'] > 0 or self.time + 30 < time():
+            self.clean_offline_player()
             # Does the room have any player
             if len(room[self.room_id]['players']) == 0:
                 # Delete room
@@ -146,6 +144,7 @@ def multiplayer_game_create():
         room_id = get_random_code()
         # Defined new room dictionary
         room[room_id] = {
+            'join': 0,  # Defined join in room
             'players': {},  # Defined players dictionary in room
             'bullets': {},  # Defined bullets dictionary in room
             'size': [width, height]  # Save room size
