@@ -14,7 +14,9 @@ from numpy import cos, pi, sin, sqrt, power, abs
 
 class Room:
     def __init__(self, room_id):
+        # Save room id
         self.room_id = room_id
+        # Save room create time
         self.time = time()
 
         # Start update
