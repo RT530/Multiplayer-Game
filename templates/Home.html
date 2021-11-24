@@ -1,0 +1,95 @@
+<html>
+
+<head>
+    <title>Multiplayer Game</title>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2.4.0/dist/umd/popper.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.js"></script>
+
+    <script src="/extra.js"></script>
+</head>
+
+<body>
+{% if page == 'display' %}
+    <div style="overflow: scroll; width: 175; height: 205; border: 1px solid #000000;">
+        {% for id in room %}
+            <p style="width: 100%;" align="center"><a href="/Multiplayer Game/{{ id }}/join">{{ id }}</a></p>
+        {% endfor %}
+    </div>
+{% elif page == 'create' %}
+    <div style="width: 260;">
+        <h1 align="center" style="width: 260;">Create Room</h1>
+        <form method="POST">
+            Width:
+            <input type="number" name="width" placeholder="1000~10000"
+                   style="position: absolute; width: 180; right: 0;">
+            <br>
+            Height:
+            <input type="number" name="height" placeholder="1000~10000"
+                   style="position: absolute; width: 180; right: 0;">
+            <br>
+            Password:
+            <input type="text" name="password" placeholder="None" style="position: absolute; width: 180; right: 0;">
+            <br>
+            <br>
+            <button class="btn btn-primary" style="width: 260;" type="submit">Create</button>
+        </form>
+    </div>
+{% else %}
+    <div style="width: 400;">
+        <h1 style="width: 100%;" align="center">Multiplayer Game</h1>
+        <a href="/Multiplayer Game/create">
+            <button style="width: 100%;" class="btn btn-primary">Create Room</button>
+        </a>
+        <a href="/Multiplayer Game/room">
+            <button style="width: 100%;" class="btn btn-primary">Join Room</button>
+        </a>
+    </div>
+{% endif %}
+
+<script>
+    $('div').center()
+
+    $(window).resize(() => {
+        $('div').center()
+    })
+</script>
+
+{% if page == 'display' or page == 'create' %}
+    <script>
+        var old_password = ''
+        $('input').on('keyup', function () {
+            if ($(this).attr('type') == 'text') {
+                if ($(this).val().length > 12) {
+                    $(this).val(old_password)
+                    alert('Password cannot be over 12 characters')
+                } else {
+                    old_password = $(this).val()
+                }
+            }
+        })
+        $('input').on('change', function () {
+            if ($(this).attr('type') == 'number') {
+                if ($(this).val() < 1000) {
+                    alert('It cannot be lower than 1000')
+                    $(this).val(1000)
+                }
+                if ($(this).val() > 10000) {
+                    alert('It cannot be over 10000')
+                    $(this).val(10000)
+                }
+            }
+        })
+    </script>
+{% endif %}
+</body>
+
+</html>
